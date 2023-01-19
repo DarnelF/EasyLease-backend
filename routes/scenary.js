@@ -4,6 +4,11 @@ var router = express.Router();
 const Scenary = require("../models/scenary");
 const { checkBody } = require("../modules/checkBody");
 const User = require('../models/users')
+const Client = require('../models/client')
+
+router.get("/test", (req,res) => {
+  res.json({result:true, message: "TEST PASSED !!"})
+})
 
 router.get("/token/:token", (req, res) => {
   User.findOne({ token: req.params.token })
@@ -57,8 +62,15 @@ router.post("/new", (req, res) => {
           marge: req.body.marge,
         });
         newScenary.save().then((newScenary) => {
-          User.updateOne({ token: req.body.token },{$push: { scenary: newScenary._id },})
-          .then(data => {
+          Client.updateOne(
+            {_id: req.body.client},
+            {$push: { scenary: newScenary._id }} )
+            .then(data => console.log("update client",data)) 
+          User.updateOne(
+            { token: req.body.token },
+            {$push: { scenary: newScenary._id }},
+
+            ).then(() => {
             res.json({ result: true, contrat: newScenary });
           })
         });
@@ -70,15 +82,15 @@ router.post("/new", (req, res) => {
   );
 });
 
-router.get("/all", (req, res) => {
-  Scenary.find().then((data) => {
-    if (data) {
-      res.json({ result: true, scenaries: data });
-    } else {
-      res.json({ result: false, error: "Pas de scénarios !" });
-    }
-  });
-});
+// router.get("/all", (req, res) => {
+//   Scenary.find().then((data) => {
+//     if (data) {
+//       res.json({ result: true, scenaries: data });
+//     } else {
+//       res.json({ result: false, error: "Pas de scénarios !" });
+//     }
+//   });
+// });
 
 router.get("/:id", (req, res) => {
   Scenary.findById({ _id: req.params.id }).then((data) => {

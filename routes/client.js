@@ -2,6 +2,8 @@ var express = require("express");
 var router = express.Router();
 const Client = require("../models/client");
 const User = require("../models/users");
+const Scenary = require("../models/scenary");
+const Contrat = require("../models/contrat");
 const Interlocutor = require("../models/interlocutor");
 const { checkBody } = require("../modules/checkBody");
 const { populate } = require("../models/users");
@@ -65,14 +67,14 @@ router.post("/uploadClient", async (req, res) => {
       "token", // Ajout du champ "token"
     ])
   ) {
-    res.json({ result: false, error: "Missing or empty fields" });
+    res.json({ result: false, error: "Champs vides ou manquants" });
     return;
   }
 
   // Vérifie l'existence du client
-  let clientData = await Client.findOne({ name: req.body.name });
+  // let clientData = await Client.findOne({ name: req.body.name });
 
-  if (clientData === null) {
+  // if (clientData === null) {
     // Crée un nouveau client
     const newClient = new Client({
       name: req.body.name,
@@ -116,10 +118,10 @@ await User.updateOne({ token: req.body.token },{$push: { clients: newDoc._id },}
 
 // Envoie une réponse positive au client
 res.json({ result: true });
-  } else {
-    // Envoie une réponse négative au client si le client existe déjà
-    res.json({ result: false, error: "Client already exists" });
-  }
+  // } else {
+  //   // Envoie une réponse négative au client si le client existe déjà
+  //   res.json({ result: false, error: "Client existe déja" });
+  // }
 });
 
 router.post("/addInterlocutor", (req, res) => {
@@ -133,7 +135,7 @@ router.post("/addInterlocutor", (req, res) => {
       "email",
     ])
   ) {
-    res.json({ result: false, error: "Missing or empty fields" });
+    res.json({ result: false, error: "Champs vides ou manquants" });
     return;
   }
 
@@ -172,20 +174,70 @@ router.get('/test/:token', (req, res) => {
             if (data) {
                 res.json({ result: true, clientsInfos: data})
             } else {
-                res.json({ message: 'not found' })
+                res.json({ result: false ,message: 'pas trouvé' })
             }
         })
 });
 
-router.delete('/delete/:id', (req,res) => {
-  Client.deleteOne({_id : req.params.id}).then(data => {
-    if (data) {
-      res.json({ result: true, client: data });
-    } else {
-      res.json({ result: false, error: "Client pas trouver !" });
-    }
-  })
+// router.delete('/delete/:id', (req,res) => {
+//   Contrat.find({})
+//   .then(dataContrat => {
+//     if (dataContrat.length >= 1) {
+//       res.json({result: false, contrats : dataContrat});
+//       return
+//     }
+//   })
+//     Scenary.find({})
+//     .then(dataScenary => {
+//       if (dataScenary.length >= 1) {
+//         res.json({result: false, scénarios : dataScenary});
+//         return
+//       }
+//     })
+
+//     Client.deleteOne({_id : req.params.id}).then(data => {
+//       if (data) {
+//         res.json({ result: true, client: data });
+//       } else {
+//         res.json({ result: false, error: "Client pas trouver !" });
+//       }
+//     })
+// });
+
+router.delete('/delete/:id', (req, res) => {
+  Client.findById(req.params.id)
+    .then(client => {
+      if (!client) {
+        res.json({ result: false, error: "Client pas trouvé" });
+        return;
+      }
+
+      Contrat.find({ client: client._id })
+        .then(dataContrat => {
+          if (dataContrat.length >= 1) {
+            res.json({ result: false, error: "Impossible de supprimer le client car il dispose de contrats", contrats: dataContrat });
+            return;
+          }
+
+          Scenary.find({ client: client._id })
+            .then(dataScenary => {
+              if (dataScenary.length >= 1) {
+                res.json({ result: false, error: "Impossible de supprimer le client car il dispose de scénarios", scénarios: dataScenary });
+                return;
+              }
+
+              Client.deleteOne({ _id: client._id }).then(data => {
+                if (data) {
+                  res.json({ result: true });
+                } else {
+                  res.json({ result: false, error: "Echec de la suppression du client" });
+                }
+              })
+            })
+        })
+    })
 });
+
 
 router.put("/update/:id", (req, res) => {
   Client.updateOne({ _id: req.params.id },
